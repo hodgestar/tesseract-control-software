@@ -59,9 +59,8 @@ def main(fps, ttype, transition, animation, frame_addr):
     frame_socket = context.socket(zmq.PUB)
     frame_socket.bind(frame_addr)
 
-    fc = FrameConstants(fps=fps, etype=ttype)
+    fc = FrameConstants(fps=fps, ttype=ttype)
     engine = EffectEngine(fc=fc, tick=tick, transition=transition)
-    engine.add_default_command_types()
     if animation:
         for name in animation.split(','):
             engine.add_animation_type(import_animation(name))
