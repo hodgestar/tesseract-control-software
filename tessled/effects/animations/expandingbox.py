@@ -8,6 +8,7 @@
 import itertools
 
 from ..engine import Animation
+from ..sprites import Cube
 
 
 class ExpandingBox(Animation):
@@ -18,23 +19,11 @@ class ExpandingBox(Animation):
 
     def post_init(self):
         self._sizes = itertools.cycle([2, 4, 6, 8, 6, 4])
+        self._cube = Cube()
 
     def render(self, frame):
         size = next(self._sizes)
-        small = 4-size/2
-        big = small + size-1
-
-        frame[small, small, small:big] = 255
-        frame[small, small:big, small] = 255
-        frame[small, big, small:big] = 255
-        frame[small, small:big, big] = 255
-
-        frame[big, small, small:big] = 255
-        frame[big, small:big, small] = 255
-        frame[big, big, small:big] = 255
-        frame[big, small:big, big] = 255
-
-        frame[small:big, small, small] = 255
-        frame[small:big, small, big] = 255
-        frame[small:big, big, small] = 255
-        frame[small:big, big, big] = 255
+        self._cube.size = size
+        small = 4 - size / 2
+        self._cube.pos = (small, small, small)
+        self._cube.render(frame)
