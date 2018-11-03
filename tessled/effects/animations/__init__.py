@@ -3,9 +3,11 @@
 """ Animations package. """
 
 from ..engine import Animation
+from .foltext import FolText
 from .poweron import PowerOn
 
 DEFAULT_ANIMATIONS = [
+    FolText,
     PowerOn,
 ]
 
