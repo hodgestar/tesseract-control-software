@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# A very simple way to run the tesseract control system pieces
+
+trap 'kill $(jobs -p)' EXIT
+
+tesseract-effectbox &
+tesseract-simulator &
+
+wait -n $(jobs -p)
