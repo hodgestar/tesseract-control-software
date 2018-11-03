@@ -99,7 +99,7 @@ class Animation(object):
         """ Render the animation to the frame. """
 
 
-class Unit(object):
+class Sprite(object):
     """ Base unit class.
 
         A unit is simply a building block for building animations on
