@@ -3,10 +3,12 @@
 """ Animations package. """
 
 from ..engine import Animation
+from .expandingbox import ExpandingBox
 from .foltext import FolText
 from .poweron import PowerOn
 
 DEFAULT_ANIMATIONS = [
+    ExpandingBox,
     FolText,
     PowerOn,
 ]
