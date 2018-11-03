@@ -38,7 +38,7 @@ from .frame_utils import FrameConstants
 
 @click.command(context_settings={"auto_envvar_prefix": "TSC"})
 @click.option(
-    '--fps', default=20,
+    '--fps', default=10,
     help='Frames per second.')
 @click.option(
     '--ttype', default="tesseract",
