@@ -261,7 +261,6 @@ class Tesseract(object):
         gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
 
 
-
 def gl_init(screen_size, display_mode):
     """ Initialize display for OpenGL. """
     pygame.display.set_mode(screen_size, display_mode)
