@@ -301,7 +301,7 @@ def main(fps, print_fps, frame_addr):
     frame_socket.connect(frame_addr)
     frame_socket.setsockopt_string(zmq.SUBSCRIBE, u"")  # receive everything
 
-    fc = frame_utils.FrameConstants()
+    fc = frame_utils.FrameConstants(fps=fps, ttype="simulator")
     frame = fc.empty_frame()
     try:
         while True:
