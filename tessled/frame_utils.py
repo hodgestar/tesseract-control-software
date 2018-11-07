@@ -8,7 +8,7 @@
 import numpy as np
 
 # Fundamental constants of the Tesseract universe
-# Tesseract shape (number of X LEDs, number of Y LEDs, number of Z LEDs)
+# Tesseract shape (number of Z LEDs, number of Y LEDs, number of X LEDs)
 FRAME_SHAPE = (8, 8, 8)
 FRAME_DTYPE = np.uint8
 
@@ -26,8 +26,11 @@ class FrameConstants(object):
     def __init__(self, fps=10, ttype="simulator"):
         assert ttype in ("simulator", "tesseract"), (
             "ttype must be one of 'simulator' or 'tesseract'")
+        self.fps = fps
+        self.ttype = ttype
         self.frame_shape = FRAME_SHAPE
         self.frame_dtype = FRAME_DTYPE
+        self.layers = FRAME_SHAPE[0]
 
     def empty_frame(self):
         """ Return an numpy array for frame. """
