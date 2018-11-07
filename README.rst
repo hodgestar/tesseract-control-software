@@ -67,6 +67,10 @@ Or::
 
     $ pip install -e .[simulator]  # for development
 
+Or::
+
+    $ pip install -e .[spidev]  # for driving the LEDs on the Raspberry Pi
+
 Run the API, EffectBox and simulator::
 
     $ tesseract-effectbox
@@ -75,3 +79,7 @@ Run the API, EffectBox and simulator::
 Or run everything together at once::
 
     $ tesseract-runner
+
+Or run the SPI LED driver on the Pi::
+
+    $ tesseract-spidev-driver

@@ -19,11 +19,13 @@ setup(
     ],
     extras_require={
         'simulator': ['faulthandler', 'pygame_cffi', 'PyOpenGL'],
+        'spidev': ['wiringpi', 'spidev'],
     },
     entry_points={  # Optional
         'console_scripts': [
             'tesseract-effectbox=tessled.effectbox:main',
             'tesseract-simulator=tessled.simulator:main',
+            'tesseract-spidev-driver=tessled.spidev_driver:main',
         ],
     },
     scripts=[
