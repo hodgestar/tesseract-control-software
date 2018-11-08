@@ -113,8 +113,8 @@ class TLCs(object):
         self.gpio.digitalWrite(self.blank, self.gpio.HIGH)
         self.gpio.digitalWrite(self.gsclk, self.gpio.LOW)
         # turn LEDs on and disable dot correction (DC)
-        self.write_pwm([4095] * self.n_outputs)
-        self.write_dc([0] * self.n_outputs)
+        self.write_pwm(np.array([4095] * self.n_outputs))
+        self.write_dc(np.array([0] * self.n_outputs))
         # start displaying and start clocking again
         self.gpio.digitalWrite(self.blank, self.gpio.LOW)
         self.gpio.digitalWrite(self.gsclk, self.gpio.HIGH)
