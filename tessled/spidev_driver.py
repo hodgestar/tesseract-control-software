@@ -25,6 +25,45 @@ import spidev
 from . import frame_utils
 
 
+def pack_to_12bit(values):
+    """ Pack an array of integers to an array of 12-bit values
+        each stored in one and half bytes.
+
+        Each set of two values is stored as three bytes::
+
+            [V_00 .. V_07] [V_08 .. V_0B, V_10 .. V13] [V_14 .. V_1B]
+
+        Currently timed at ~10us for 80 values.
+    """
+    values = values % 4096  # clamp to 0 to 4095 (i.e. 12 bit)
+    v_0, v_1 = values[0::2], values[1::2]
+    b = np.zeros(3 * len(values) / 2, dtype=np.uint8)
+    b[0::3] = (v_0 >> 4)
+    b[1::3] = ((v_0 % 16) << 4) + (v_1 >> 8)
+    b[2::3] = (v_1 % 256)
+    return b
+
+
+def pack_to_6bit(values):
+    """ Pack an array of integers to an array of 6-bit values
+        each stored in three quarters of a byte.
+
+        Each set of four values is stored as three bytes::
+
+            [V_00 .. V_05, V_10 .. V_11] [V_12 .. V_15, V_20 .. V_23]
+            [V_24 .. V_25, V_30 .. V_35]
+
+        Currently timed at ~15us for 80 values.
+    """
+    values = values % 64  # clamp to 0 to 63 (i.e. 6 bit)
+    v_0, v_1, v_2, v_3 = values[0::4], values[1::4], values[2::4], values[3::4]
+    b = np.zeros(3 * len(values) / 4, dtype=np.uint8)
+    b[0::3] = (v_0 << 2) + (v_1 >> 4)
+    b[1::3] = ((v_1 % 16) << 4) + (v_2 >> 2)
+    b[2::3] = ((v_2 % 4) << 6) + (v_3)
+    return b
+
+
 class TLCs(object):
     """ Object representing a chain of TLCs and controlling them using
         wiringpi (for general GPIO) and spidev (for clocking data into
@@ -86,12 +125,13 @@ class TLCs(object):
             :param numpy.array dc_values:
                 A numpy array with the dot clock values for each TLC output.
                 Each value must be in the range 0-63 (inclusive).
+
+            Values are written to the TLCs in reverse order (since each value
+            is clocked through to the next input).
         """
-        # TODO: reverse values
-        # TODO: pack 4 values (4 * 6 bits) into 3 bytes (3 * 8 bits)
-        packed_dc_values = []
+        dc_buffer = pack_to_6bit(dc_values[::-1])
         self.gpio.digitalWrite(self.vprgpin, self.gpio.HIGH)
-        self.spi.writebytes(packed_dc_values)
+        self.spi.writebytes2(dc_buffer)
 
     def write_pwm(self, pwm_values):
         """ Write the PWM output levels.
@@ -99,12 +139,13 @@ class TLCs(object):
             :param numpy.array pwm_values:
                 A numpy array with the PWM values for each TLC output.
                 Each value must be in the range 0-4095 (inclusive).
+
+            Values are written to the TLCs in reverse order (since each value
+            is clocked through to the next input).
         """
-        # TODO: reverse values
-        # TODO: pack 2 values (2 * 12 bits) into 3 bytes (3 * 8 bits)
-        packed_pwm_values = []
+        pwm_buffer = pack_to_12bit(pwm_values[::-1])
         self.gpio.digitalWrite(self.vprgpin, self.gpio.LOW)
-        self.spi.writebytes(packed_pwm_values)
+        self.spi.writebytes2(pwm_buffer)
 
 
 @click.command(context_settings={"auto_envvar_prefix": "TSC"})
@@ -128,12 +169,13 @@ def main(fps, frame_addr):
     fc = frame_utils.FrameConstants(fps=fps, ttype="tesseract")
     frame = fc.empty_frame()
 
-    pwm_values = np.zeros(tlcs.n_outputs)
+    pwm_values = np.zeros(tlcs.n_outputs, dtype=np.uint16)
     layers = list(range(fc.layers))
     layer_masks = [np.zeros(16) for _ in range(fc.layers)]
     for l in layers:
         layer_masks[l][l] = 1
 
+    tlcs.init_tlcs()
     while True:
         try:
             data = frame_socket.recv(flags=zmq.NOBLOCK)
@@ -144,7 +186,7 @@ def main(fps, frame_addr):
             frame = np.frombuffer(data, dtype=frame_utils.FRAME_DTYPE)
             frame.shape = frame_utils.FRAME_SHAPE
         for layer in layers:
-            pwm_values[0:64] = frame[layer]
+            pwm_values[0:64] = frame[layer] * 16  # 16 == 4096 / 256
             pwm_values[65:] = layer_masks[layer]
             tlcs.write_pwm(pwm_values)
 
