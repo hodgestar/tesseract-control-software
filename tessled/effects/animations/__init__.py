@@ -5,12 +5,14 @@
 from ..engine import Animation
 from .expandingbox import ExpandingBox
 from .exploringbox import ExploringBox
+from .exploringsphere import ExploringSphere
 from .foltext import FolText
 from .poweron import PowerOn
 
 DEFAULT_ANIMATIONS = [
     ExpandingBox,
     ExploringBox,
+    ExploringSphere,
     FolText,
     PowerOn,
 ]
