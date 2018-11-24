@@ -73,51 +73,71 @@ class TLCs(object):
             The number of TLC chips connected in series.
         :param int gsclk:
             The (wiringpi) pin number connected to the TLC GSCLK line.
-        :param in blank:
+        :param int blank:
             The (wiringpi) pin number connected to the TLC BLANK line.
-        :param in vprg:
+        :param int vprg:
             The (wiringpi) pin number connected to the TLC VPRG line.
+        :param int xlat:
+            The (wiringpi) pin number connected to the TLC XLAT line.
+        :param int dcprg:
+            The (wiringpi) pin number connected to the TLC DCPRG line.
         :param int spibus:
             The number of the SPI bus to use. Default: 0.
         :param int spidevice:
             The number of the SPI device to use. Default: 0.
         :param int spispeed:
             The SPI maximum speed in Hz. Default: 500 kHz.
+        :param bool inverted:
+            Whether the signal logic should be inverted (for both the SPI
+            signals and the GPIO controlled pins). Default: True.
 
         Inspired heavily by
         https://github.com/eflukx/enlightenPi/blob/master/TLC5940.py.
     """
     def __init__(
-            self, tlcs, gsclk, blank, vprg,
-            spibus=0, spidevice=0, spispeed=500000):
+            self, tlcs, gsclk, blank, vprg, xlat, dcprg,
+            spibus=0, spidevice=0, spispeed=500000, inverted=True):
         self.n_tlcs = tlcs
-        self.n_outputs = self._ntlcs * 16  # 16 outputs per TLC
+        self.n_outputs = self.n_tlcs * 16  # 16 outputs per TLC
         self.gsclk = gsclk
         self.blank = blank
         self.vprg = vprg
+        self.xlat = xlat
+        self.dcprg = dcprg
 
         # setup SPI
         self.spi = spidev.SpiDev()
         self.spi.open(spibus, spidevice)
         self.spi.max_speed_hz = spispeed
+        if inverted:
+            self.spi.mode = 0b10  # invert clock signal
 
         # setup GPIO pins
         self.gpio = wiringpi.GPIO(wiringpi.GPIO.WPI_MODE_PINS)
-        self.gpio.pinMode(self.gsclkpin, self.gpio.OUTPUT)
-        self.gpio.pinMode(self.blankpin, self.gpio.OUTPUT)
-        self.gpio.pinMode(self.vprgpin, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.gsclk, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.blank, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.vprg, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.xlat, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.dcprg, self.gpio.OUTPUT)
+
+        if inverted:
+            self.HIGH = self.gpio.LOW
+            self.LOW = self.gpio.HIGH
+        else:
+            self.HIGH = self.gpio.HIGH
+            self.LOW = self.gpio.LOW
 
     def init_tlcs(self):
         """ Initialize the TLCs."""
         # stop displaying and reset the internal counter
-        self.gpio.digitalWrite(self.blank, self.gpio.HIGH)
-        self.gpio.digitalWrite(self.gsclk, self.gpio.LOW)
+        self.gpio.digitalWrite(self.blank, self.HIGH)
+        self.gpio.digitalWrite(self.gsclk, self.LOW)
         # turn LEDs on and disable dot correction (DC)
         self.write_pwm(np.array([4095] * self.n_outputs))
         self.write_dc(np.array([0] * self.n_outputs))
         # start displaying and start clocking again
-        self.gpio.digitalWrite(self.blank, self.gpio.LOW)
-        self.gpio.digitalWrite(self.gsclk, self.gpio.HIGH)
+        self.gpio.digitalWrite(self.blank, self.LOW)
+        self.gpio.digitalWrite(self.gsclk, self.HIGH)
 
     def write_dc(self, dc_values):
         """ Write the dot clock (DC) levels.
@@ -147,6 +167,18 @@ class TLCs(object):
         self.gpio.digitalWrite(self.vprgpin, self.gpio.LOW)
         self.spi.writebytes2(pwm_buffer)
 
+    def test_io(self):
+        """ Test GPIO pins by cycling them each in turn """
+        click.echo("Testing IO pins ...")
+        for pin_name in ['vprg', 'gsclk', 'blank', 'xlat']:
+            for state_name in ['high', 'low']:
+                pin = getattr(self, pin_name)
+                state = getattr(self.gpio, state_name.upper())
+                self.gpio.digitalWarite(pin, state)
+                click.pause("{} ({}) set {} ...".format(
+                    pin_name, pin, state_name))
+        click.echo("Test complete.")
+
 
 @click.command(context_settings={"auto_envvar_prefix": "TSC"})
 @click.option(
@@ -155,7 +187,10 @@ class TLCs(object):
 @click.option(
     '--frame-addr', default='tcp://127.0.0.1:5556',
     help='ZeroMQ address to publish frames too.')
-def main(fps, frame_addr):
+@click.option(
+    '--test-io', default=False, type=bool,
+    help='Test IO pins')
+def main(fps, frame_addr, test_io):
     click.echo("Tesseract spidev LED driver running.")
     context = zmq.Context()
     frame_socket = context.socket(zmq.SUB)
@@ -163,8 +198,11 @@ def main(fps, frame_addr):
     frame_socket.setsockopt_string(zmq.SUBSCRIBE, u"")  # receive everything
 
     tlcs = TLCs(
-        tlcs=5, gsclk=4, blank=3, vprg=5,
+        tlcs=5, gsclk=4, blank=3, vprg=5, xlat=6, dcprg=7,
         spibus=0, spidevice=0, spispeed=500000)
+    if test_io:
+        tlcs.test_io()
+        return
 
     fc = frame_utils.FrameConstants(fps=fps, ttype="tesseract")
     frame = fc.empty_frame()
