@@ -23,6 +23,11 @@ class TestPackTo12Bit:
         assert np.array_equal(x, [255, 255, 255])
         assert x.dtype == np.uint8
 
+    def test_many_ones(self):
+        x = pack_to_12bit(np.array([4095, 4095] * 80))
+        assert np.array_equal(x, [255, 255, 255] * 80)
+        assert x.dtype == np.uint8
+
 
 class TestPackTo6Bit:
     def test_zeros(self):
@@ -33,6 +38,11 @@ class TestPackTo6Bit:
     def test_ones(self):
         x = pack_to_6bit(np.array([63, 63, 63, 63]))
         assert np.array_equal(x, [255, 255, 255])
+        assert x.dtype == np.uint8
+
+    def test_many_ones(self):
+        x = pack_to_6bit(np.array([63, 63, 63, 63] * 80))
+        assert np.array_equal(x, [255, 255, 255] * 80)
         assert x.dtype == np.uint8
 
 
