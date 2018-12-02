@@ -48,11 +48,11 @@ class TestPackTo6Bit:
 
 class TestTLCs:
     def test_create_inverted(self):
-        tlcs = TLCs(tlcs=5, gsclk=4, blank=3, vprg=5, xlat=6, dcprg=7,
+        tlcs = TLCs(tlcs=5,
+                    blank=3, vprg=5, xlat=6, dcprg=7,
                     spibus=0, spidevice=1, spispeed=500000)
         assert tlcs.n_tlcs == 5
         assert tlcs.n_outputs == 5 * 16
-        assert tlcs.gsclk == 4
         assert tlcs.blank == 3
         assert tlcs.vprg == 5
         assert tlcs.xlat == 6
@@ -62,7 +62,6 @@ class TestTLCs:
         assert wiringpi_fake.GPIO.fake_state == {
             'initialized': True,
             'mode': '__WPI_MODE_PINS__',
-            'pin-4': '__OUTPUT__',
             'pin-3': '__OUTPUT__',
             'pin-5': '__OUTPUT__',
             'pin-6': '__OUTPUT__',

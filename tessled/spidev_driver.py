@@ -71,8 +71,6 @@ class TLCs(object):
 
         :param int tlcs:
             The number of TLC chips connected in series.
-        :param int gsclk:
-            The (wiringpi) pin number connected to the TLC GSCLK line.
         :param int blank:
             The (wiringpi) pin number connected to the TLC BLANK line.
         :param int vprg:
@@ -95,11 +93,10 @@ class TLCs(object):
         https://github.com/eflukx/enlightenPi/blob/master/TLC5940.py.
     """
     def __init__(
-            self, tlcs, gsclk, blank, vprg, xlat, dcprg,
+            self, tlcs, blank, vprg, xlat, dcprg,
             spibus=0, spidevice=0, spispeed=500000, inverted=True):
         self.n_tlcs = tlcs
         self.n_outputs = self.n_tlcs * 16  # 16 outputs per TLC
-        self.gsclk = gsclk
         self.blank = blank
         self.vprg = vprg
         self.xlat = xlat
@@ -114,7 +111,6 @@ class TLCs(object):
 
         # setup GPIO pins
         self.gpio = wiringpi.GPIO(wiringpi.GPIO.WPI_MODE_PINS)
-        self.gpio.pinMode(self.gsclk, self.gpio.OUTPUT)
         self.gpio.pinMode(self.blank, self.gpio.OUTPUT)
         self.gpio.pinMode(self.vprg, self.gpio.OUTPUT)
         self.gpio.pinMode(self.xlat, self.gpio.OUTPUT)
@@ -129,15 +125,11 @@ class TLCs(object):
 
     def init_tlcs(self):
         """ Initialize the TLCs."""
-        # stop displaying and reset the internal counter
+        self.gpio.digitalWrite(self.dcprg, self.LOW)
+        self.gpio.digitalWrite(self.vprg, self.HIGH)
+        self.gpio.digitalWrite(self.xlat, self.LOW)
         self.gpio.digitalWrite(self.blank, self.HIGH)
-        self.gpio.digitalWrite(self.gsclk, self.LOW)
-        # turn LEDs on and disable dot correction (DC)
-        self.write_pwm(np.array([4095] * self.n_outputs))
-        self.write_dc(np.array([0] * self.n_outputs))
-        # start displaying and start clocking again
-        self.gpio.digitalWrite(self.blank, self.LOW)
-        self.gpio.digitalWrite(self.gsclk, self.HIGH)
+        self.gpio.digitalWrite(self.vprg, self.LOW)
 
     def write_dc(self, dc_values):
         """ Write the dot clock (DC) levels.
@@ -149,9 +141,12 @@ class TLCs(object):
             Values are written to the TLCs in reverse order (since each value
             is clocked through to the next input).
         """
+        self.gpio.digitalWrite(self.dcprg, self.HIGH)
+        self.gpio.digitalWrite(self.vprg, self.HIGH)
         dc_buffer = pack_to_6bit(dc_values[::-1])
-        self.gpio.digitalWrite(self.vprgpin, self.gpio.HIGH)
-        self.spi.writebytes2(dc_buffer)
+        dc_buffer = np.bitwise_not(dc_buffer)
+        self.gpio.digitalWrite(self.vprg, self.HIGH)
+        self.spi.writebytes(dc_buffer.tolist())
 
     def write_pwm(self, pwm_values):
         """ Write the PWM output levels.
@@ -164,13 +159,42 @@ class TLCs(object):
             is clocked through to the next input).
         """
         pwm_buffer = pack_to_12bit(pwm_values[::-1])
-        self.gpio.digitalWrite(self.vprgpin, self.gpio.LOW)
-        self.spi.writebytes2(pwm_buffer)
+        pwm_buffer = np.bitwise_not(pwm_buffer)
+        self.gpio.digitalWrite(self.blank, self.LOW)
+        self.spi.writebytes(pwm_buffer.tolist())
+        self.gpio.digitalWrite(self.blank, self.HIGH)
+        self.gpio.digitalWrite(self.xlat, self.HIGH)
+        self.gpio.digitalWrite(self.xlat, self.LOW)
 
-    def test_io(self):
+
+class Tester:
+    """ TLC pin tester. """
+
+    def __init__(self, gsclk, blank, vprg, xlat, dcprg, sin, sclk):
+        self.gsclk = gsclk
+        self.blank = blank
+        self.vprg = vprg
+        self.xlat = xlat
+        self.dcprg = dcprg
+        self.sin = sin
+        self.sclk = sclk
+
+        # setup GPIO pins
+        self.gpio = wiringpi.GPIO(wiringpi.GPIO.WPI_MODE_PINS)
+        self.gpio.pinMode(self.blank, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.vprg, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.xlat, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.dcprg, self.gpio.OUTPUT)
+
+        self.gpio.pinMode(self.gsclk, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.sin, self.gpio.OUTPUT)
+        self.gpio.pinMode(self.sclk, self.gpio.OUTPUT)
+
+    def test_pins(self):
         """ Test GPIO pins by cycling them each in turn """
         click.echo("Testing IO pins ...")
-        for pin_name in ['vprg', 'gsclk', 'blank', 'xlat']:
+        for pin_name in [
+                'dcprg', 'xlat', 'sin', 'gsclk', 'sclk', 'blank', 'vprg']:
             for state_name in ['high', 'low']:
                 pin = getattr(self, pin_name)
                 state = getattr(self.gpio, state_name.upper())
@@ -197,12 +221,26 @@ def main(fps, frame_addr, test_io):
     frame_socket.connect(frame_addr)
     frame_socket.setsockopt_string(zmq.SUBSCRIBE, u"")  # receive everything
 
-    tlcs = TLCs(
-        tlcs=5, gsclk=4, blank=3, vprg=5, xlat=6, dcprg=7,
-        spibus=0, spidevice=0, spispeed=500000)
     if test_io:
-        tlcs.test_io()
+        tester = Tester(
+            gsclk=14, blank=3, vprg=5, xlat=6, dcprg=7, sin=12, sclk=14)
+        tester.test_pins()
         return
+
+    # 3 906 250  Hz is the maximum SPI bus speed at which we can
+    # correctly clock data into the TLC chips. The factor of 4 was
+    # emperically determined as a good balance between time spent
+    # in Python code and time spent clocking data in the SPI (faster SPI
+    # writes gives faster rendering of each layer, but looping through the
+    # layers more often means the LEDs appear less bright because they are only
+    # lit while the SPI clock is being toggled).
+    max_spispeed = 3906250
+    spispeed = max_spispeed / 4
+
+    tlcs = TLCs(
+        tlcs=5,
+        blank=3, vprg=5, xlat=6, dcprg=7,
+        spibus=0, spidevice=0, spispeed=spispeed)
 
     fc = frame_utils.FrameConstants(fps=fps, ttype="tesseract")
     frame = fc.empty_frame()
@@ -211,7 +249,7 @@ def main(fps, frame_addr, test_io):
     layers = list(range(fc.layers))
     layer_masks = [np.zeros(16) for _ in range(fc.layers)]
     for l in layers:
-        layer_masks[l][l] = 1
+        layer_masks[l][l] = 4095
 
     tlcs.init_tlcs()
     while True:
@@ -224,8 +262,17 @@ def main(fps, frame_addr, test_io):
             frame = np.frombuffer(data, dtype=frame_utils.FRAME_DTYPE)
             frame.shape = frame_utils.FRAME_SHAPE
         for layer in layers:
-            pwm_values[0:64] = frame[layer] * 16  # 16 == 4096 / 256
-            pwm_values[65:] = layer_masks[layer]
+            pwm_values[0:16] = layer_masks[layer].ravel()
+            # Currently we set LEDs either completely off (intensity <= 125)
+            # or completely on (intensity > 125) because this renders without
+            # glitches on the mini cube.
+            pwm_values[16:] = (frame[layer].ravel() > 125)
+            pwm_values[16:] *= 4095
+            # These two lines scale the intensity from 0-255 to 0-4095 but
+            # are commented out for now because they cause rendering glitches
+            # on the mini cube:
+            # pwm_values[16:] = frame[layer].ravel()
+            # pwm_values[16:] *= 16  # 16 == 4096 / 256
             tlcs.write_pwm(pwm_values)
 
     click.echo("Tesseract spidev LED driver exited.")
