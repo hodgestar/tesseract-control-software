@@ -17,6 +17,7 @@
 
 import click
 import numpy as np
+import datetime
 import zmq
 
 import wiringpi
@@ -41,6 +42,7 @@ def pack_to_12bit(values):
     b[0::3] = (v_0 >> 4)
     b[1::3] = ((v_0 % 16) << 4) + (v_1 >> 8)
     b[2::3] = (v_1 % 256)
+    b = np.bitwise_not(b)
     return b
 
 
@@ -95,8 +97,9 @@ class TLCs(object):
         https://github.com/eflukx/enlightenPi/blob/master/TLC5940.py.
     """
     def __init__(
-            self, tlcs, gsclk, blank, vprg, xlat, dcprg,
-            spibus=0, spidevice=0, spispeed=500000, inverted=True):
+            self, tlcs, gsclk, blank, vprg, xlat, dcprg, sin, sclk,
+            spibus=0, spidevice=0, spispeed=500000, inverted=True,
+            test=False):
         self.n_tlcs = tlcs
         self.n_outputs = self.n_tlcs * 16  # 16 outputs per TLC
         self.gsclk = gsclk
@@ -104,17 +107,11 @@ class TLCs(object):
         self.vprg = vprg
         self.xlat = xlat
         self.dcprg = dcprg
-
-        # setup SPI
-        self.spi = spidev.SpiDev()
-        self.spi.open(spibus, spidevice)
-        self.spi.max_speed_hz = spispeed
-        if inverted:
-            self.spi.mode = 0b10  # invert clock signal
+        self.sin = sin
+        self.sclk = sclk
 
         # setup GPIO pins
         self.gpio = wiringpi.GPIO(wiringpi.GPIO.WPI_MODE_PINS)
-        self.gpio.pinMode(self.gsclk, self.gpio.OUTPUT)
         self.gpio.pinMode(self.blank, self.gpio.OUTPUT)
         self.gpio.pinMode(self.vprg, self.gpio.OUTPUT)
         self.gpio.pinMode(self.xlat, self.gpio.OUTPUT)
@@ -126,19 +123,31 @@ class TLCs(object):
         else:
             self.HIGH = self.gpio.HIGH
             self.LOW = self.gpio.LOW
+        # setup SPI
+        if not test:
+            self.spi = spidev.SpiDev()
+            self.spi.open(spibus, spidevice)
+            self.spi.max_speed_hz = spispeed
+            if inverted:
+                self.spi.mode = 0b10  # invert clock signal
+        else:
+            self.gpio.pinMode(self.gsclk, self.gpio.OUTPUT)
+            self.gpio.pinMode(self.sin, self.gpio.OUTPUT)
+            self.gpio.pinMode(self.sclk, self.gpio.OUTPUT)
 
     def init_tlcs(self):
         """ Initialize the TLCs."""
-        # stop displaying and reset the internal counter
+        self.gpio.digitalWrite(self.dcprg, self.LOW)
+        self.gpio.digitalWrite(self.vprg, self.HIGH)
+        self.gpio.digitalWrite(self.xlat, self.LOW)
         self.gpio.digitalWrite(self.blank, self.HIGH)
-        self.gpio.digitalWrite(self.gsclk, self.LOW)
-        # turn LEDs on and disable dot correction (DC)
+        self.gpio.digitalWrite(self.vprg, self.LOW)
+        #self.write_dc(np.array([0] * self.n_outputs))
+        #raw_input(".write_dc")
+        
         self.write_pwm(np.array([4095] * self.n_outputs))
-        self.write_dc(np.array([0] * self.n_outputs))
-        # start displaying and start clocking again
-        self.gpio.digitalWrite(self.blank, self.LOW)
-        self.gpio.digitalWrite(self.gsclk, self.HIGH)
-
+        self.spi.writebytes(np.array([1]).tolist())
+        
     def write_dc(self, dc_values):
         """ Write the dot clock (DC) levels.
 
@@ -149,9 +158,13 @@ class TLCs(object):
             Values are written to the TLCs in reverse order (since each value
             is clocked through to the next input).
         """
+        self.gpio.digitalWrite(self.dcprg, self.HIGH)
+        raw_input("self.dcprg, self.HIGH")
+        self.gpio.digitalWrite(self.vprg, self.HIGH)
+        raw_input("self.vprg, self.HIGH")
         dc_buffer = pack_to_6bit(dc_values[::-1])
-        self.gpio.digitalWrite(self.vprgpin, self.gpio.HIGH)
-        self.spi.writebytes2(dc_buffer)
+        self.gpio.digitalWrite(self.vprg, self.HIGH)
+        self.spi.writebytes(dc_buffer.tolist())
 
     def write_pwm(self, pwm_values):
         """ Write the PWM output levels.
@@ -163,9 +176,48 @@ class TLCs(object):
             Values are written to the TLCs in reverse order (since each value
             is clocked through to the next input).
         """
+        print(pwm_values.tolist())        
         pwm_buffer = pack_to_12bit(pwm_values[::-1])
-        self.gpio.digitalWrite(self.vprgpin, self.gpio.LOW)
-        self.spi.writebytes2(pwm_buffer)
+        print(pwm_buffer.tolist())        
+        self.spi.writebytes(pwm_buffer.tolist())
+        self.gpio.digitalWrite(self.blank, self.HIGH)
+        self.gpio.digitalWrite(self.xlat, self.HIGH)
+        self.gpio.digitalWrite(self.xlat, self.LOW)
+        self.gpio.digitalWrite(self.blank, self.LOW)
+        
+    def test_io(self):
+        """ Test GPIO pins by cycling them each in turn """
+        click.echo("Test IO.")
+        self.gpio.digitalWrite(self.dcprg, self.gpio.HIGH)
+        raw_input("dcprg (" + str(self.dcprg) + "), Q1, high...")
+        self.gpio.digitalWrite(self.dcprg, self.gpio.LOW)
+        raw_input("dcprg (" + str(self.dcprg) + "), Q1, low...")
+        self.gpio.digitalWrite(self.xlat, self.gpio.HIGH)
+        raw_input("xlat (" + str(self.xlat) + "), Q2, high...")
+        self.gpio.digitalWrite(self.xlat, self.gpio.LOW)
+        raw_input("xlat (" + str(self.xlat) + "), Q2, low...")
+        self.gpio.digitalWrite(self.sin, self.gpio.HIGH)
+        raw_input("sin (" + str(self.sin) + "), Q3, high...")
+        self.gpio.digitalWrite(self.sin, self.gpio.LOW)
+        raw_input("sin (" + str(self.sin) + "), Q3, low...")
+        self.gpio.digitalWrite(self.gsclk, self.gpio.HIGH)
+        raw_input("gsclk (" + str(self.gsclk) + "), Q4, high...")
+        self.gpio.digitalWrite(self.gsclk, self.gpio.LOW)
+        raw_input("gsclk (" + str(self.gsclk) + "), Q4, low...")
+        self.gpio.digitalWrite(self.sclk, self.gpio.HIGH)
+        raw_input("sclk (" + str(self.sclk) + "), Q5, high...")
+        self.gpio.digitalWrite(self.sclk, self.gpio.LOW)
+        raw_input("sclk (" + str(self.sclk) + "), Q5, low...")
+        self.gpio.digitalWrite(self.blank, self.gpio.HIGH)
+        raw_input("blank (" + str(self.blank) + "), Q6, high...")
+        self.gpio.digitalWrite(self.blank, self.gpio.LOW)
+        raw_input("blank (" + str(self.blank) + "), Q6, low...")
+        self.gpio.digitalWrite(self.vprg, self.gpio.HIGH)
+        raw_input("vprg (" + str(self.vprg) + "), Q7, high...")
+        self.gpio.digitalWrite(self.vprg, self.gpio.LOW)
+        raw_input("vprg (" + str(self.vprg) + "), Q7, low...")
+
+        click.echo("Test complete.")
 
     def test_io(self):
         """ Test GPIO pins by cycling them each in turn """
@@ -198,8 +250,8 @@ def main(fps, frame_addr, test_io):
     frame_socket.setsockopt_string(zmq.SUBSCRIBE, u"")  # receive everything
 
     tlcs = TLCs(
-        tlcs=5, gsclk=4, blank=3, vprg=5, xlat=6, dcprg=7,
-        spibus=0, spidevice=0, spispeed=500000)
+        tlcs=5, gsclk=14, blank=3, vprg=5, xlat=6, dcprg=7, sin=12, sclk=14,
+        spibus=0, spidevice=0, spispeed=500000, test=test_io)
     if test_io:
         tlcs.test_io()
         return
@@ -211,12 +263,18 @@ def main(fps, frame_addr, test_io):
     layers = list(range(fc.layers))
     layer_masks = [np.zeros(16) for _ in range(fc.layers)]
     for l in layers:
-        layer_masks[l][l] = 1
-
+        # for k in range(16):
+        #     layer_masks[l][k] = 4095
+        # layer_masks[l][l] = 0
+        layer_masks[l][l] = 4095
+    
     tlcs.init_tlcs()
+    zmq_frame = 0
+    cycle = 0
     while True:
         try:
             data = frame_socket.recv(flags=zmq.NOBLOCK)
+            zmq_frame += 1
         except zmq.ZMQError as err:
             if not err.errno == zmq.EAGAIN:
                 raise
@@ -224,8 +282,16 @@ def main(fps, frame_addr, test_io):
             frame = np.frombuffer(data, dtype=frame_utils.FRAME_DTYPE)
             frame.shape = frame_utils.FRAME_SHAPE
         for layer in layers:
-            pwm_values[0:64] = frame[layer] * 16  # 16 == 4096 / 256
-            pwm_values[65:] = layer_masks[layer]
+            pwm_values[0:16] = layer_masks[layer].ravel()
+            #pwm_values[16:32] = layer_masks[layer].ravel()
+            #pwm_values[32:48] = layer_masks[layer].ravel()
+            #pwm_values[48:64] = layer_masks[layer].ravel()
+            #pwm_values[64:] = layer_masks[layer].ravel()
+            pwm_values[16:96] = frame[layer].ravel() * 16  # 16 == 4096 / 256
             tlcs.write_pwm(pwm_values)
+        cycle += 1
+        if (cycle % 100) == 0:
+            print(zmq_frame, cycle, datetime.datetime.now().time())
+        
 
     click.echo("Tesseract spidev LED driver exited.")
