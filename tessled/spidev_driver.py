@@ -15,6 +15,8 @@
     The frame layout is described in tessled.effectbox.
 """
 
+import os
+
 import click
 import numpy as np
 import zmq
@@ -105,6 +107,7 @@ class TLCs(object):
         # setup SPI
         self.spi = spidev.SpiDev()
         self.spi.open(spibus, spidevice)
+        self.spi_fd = self.spi.fileno()
         self.spi.max_speed_hz = spispeed
         if inverted:
             self.spi.mode = 0b10  # invert clock signal
@@ -141,12 +144,12 @@ class TLCs(object):
             Values are written to the TLCs in reverse order (since each value
             is clocked through to the next input).
         """
-        self.gpio.digitalWrite(self.dcprg, self.HIGH)
-        self.gpio.digitalWrite(self.vprg, self.HIGH)
         dc_buffer = pack_to_6bit(dc_values[::-1])
         dc_buffer = np.bitwise_not(dc_buffer)
+        self.gpio.digitalWrite(self.dcprg, self.HIGH)
         self.gpio.digitalWrite(self.vprg, self.HIGH)
-        self.spi.writebytes(dc_buffer.tolist())
+        self.gpio.digitalWrite(self.vprg, self.HIGH)
+        os.write(self.spi_fd, dc_buffer)
 
     def write_pwm(self, pwm_values):
         """ Write the PWM output levels.
@@ -161,7 +164,7 @@ class TLCs(object):
         pwm_buffer = pack_to_12bit(pwm_values[::-1])
         pwm_buffer = np.bitwise_not(pwm_buffer)
         self.gpio.digitalWrite(self.blank, self.LOW)
-        self.spi.writebytes(pwm_buffer.tolist())
+        os.write(self.spi_fd, pwm_buffer)
         self.gpio.digitalWrite(self.blank, self.HIGH)
         self.gpio.digitalWrite(self.xlat, self.HIGH)
         self.gpio.digitalWrite(self.xlat, self.LOW)

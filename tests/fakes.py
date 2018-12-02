@@ -11,6 +11,9 @@ class SpiDev:
     def __init__(self):
         self.fake_state = {}
 
+    def fileno(self):
+        return 4
+
     def open(self, spibus, spidevice):
         self.fake_state.update({
             "open": True,
