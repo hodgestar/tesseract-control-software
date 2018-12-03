@@ -151,6 +151,20 @@ class TLCs(object):
         self.gpio.digitalWrite(self.vprg, self.HIGH)
         os.write(self.spi_fd, dc_buffer)
 
+    def pack_pwm(self, pwm_values):
+        """ Pack PWM values into a buffer.
+
+            :param numpy.array pwm_values:
+                A numpy array with the PWM values for each TLC output.
+                Each value must be in the range 0-4095 (inclusive).
+
+            :return numpy.array:
+                Packed and reversed array of 12-bit TLC values.
+        """
+        pwm_buffer = pack_to_12bit(pwm_values[::-1])
+        pwm_buffer = np.bitwise_not(pwm_buffer)
+        return pwm_buffer
+
     def write_pwm(self, pwm_values):
         """ Write the PWM output levels.
 
@@ -161,13 +175,59 @@ class TLCs(object):
             Values are written to the TLCs in reverse order (since each value
             is clocked through to the next input).
         """
-        pwm_buffer = pack_to_12bit(pwm_values[::-1])
-        pwm_buffer = np.bitwise_not(pwm_buffer)
+        pwm_buffer = self.pack_pwm(pwm_values)
+        self.write_pwm_packed(pwm_buffer)
+
+    def write_pwm_packed(self, pwm_buffer):
+        """ Write the PWM output levels from a pre-packed buffer.
+
+            :param numpy.array pwm_buffer:
+                A numpy array with the PWM values for each TLC output.
+                Each value must be pre-packed in 12-bits per value and
+                the buffer should be pre-reversed.
+        """
         self.gpio.digitalWrite(self.blank, self.LOW)
         os.write(self.spi_fd, pwm_buffer)
         self.gpio.digitalWrite(self.blank, self.HIGH)
         self.gpio.digitalWrite(self.xlat, self.HIGH)
         self.gpio.digitalWrite(self.xlat, self.LOW)
+
+
+class PWMBuffers:
+    """ Holder for PWM buffers.
+
+        :param TLCs tlcs:
+            The TLCs object to store buffers for.
+        :param FrameConstants fc:
+            The FrameConstants for the cube.
+    """
+
+    def __init__(self, tlcs, fc):
+        self.tlcs = tlcs
+        self.layers = list(range(fc.layers))
+
+        self.layer_masks = [np.zeros(16) for _ in range(fc.layers)]
+        for l in self.layers:
+            self.layer_masks[l][l] = 4095
+
+        self.buffers = [None for _ in self.layers]
+        self.update(fc.empty_frame())
+
+    def update(self, frame):
+        pwm_values = np.zeros(self.tlcs.n_outputs, dtype=np.uint16)
+        for layer in self.layers:
+            pwm_values[0:16] = self.layer_masks[layer].ravel()
+            # Currently we set LEDs either completely off (intensity <= 125)
+            # or completely on (intensity > 125) because this renders without
+            # glitches on the mini cube.
+            pwm_values[16:] = (frame[layer].ravel() > 125)
+            pwm_values[16:] *= 4095
+            # These two lines scale the intensity from 0-255 to 0-4095 but
+            # are commented out for now because they cause rendering glitches
+            # on the mini cube:
+            # pwm_values[16:] = frame[layer].ravel()
+            # pwm_values[16:] *= 16  # 16 == 4096 / 256
+            self.buffers[layer] = self.tlcs.pack_pwm(pwm_values)
 
 
 class Tester:
@@ -246,36 +306,22 @@ def main(fps, frame_addr, test_io):
         spibus=0, spidevice=0, spispeed=spispeed)
 
     fc = frame_utils.FrameConstants(fps=fps, ttype="tesseract")
-    frame = fc.empty_frame()
 
-    pwm_values = np.zeros(tlcs.n_outputs, dtype=np.uint16)
-    layers = list(range(fc.layers))
-    layer_masks = [np.zeros(16) for _ in range(fc.layers)]
-    for l in layers:
-        layer_masks[l][l] = 4095
+    pwm_buffers = PWMBuffers(tlcs, fc)
 
     tlcs.init_tlcs()
     while True:
-        try:
-            data = frame_socket.recv(flags=zmq.NOBLOCK)
-        except zmq.ZMQError as err:
-            if not err.errno == zmq.EAGAIN:
-                raise
-        else:
+        rlist, _, elist = zmq.select(
+            [frame_socket], [], [frame_socket], timeout=0)
+        if elist:
+            click.echo("Frame socket error.")
+            click.abort()
+        if rlist:
+            data = frame_socket.recv()
             frame = np.frombuffer(data, dtype=frame_utils.FRAME_DTYPE)
             frame.shape = frame_utils.FRAME_SHAPE
-        for layer in layers:
-            pwm_values[0:16] = layer_masks[layer].ravel()
-            # Currently we set LEDs either completely off (intensity <= 125)
-            # or completely on (intensity > 125) because this renders without
-            # glitches on the mini cube.
-            pwm_values[16:] = (frame[layer].ravel() > 125)
-            pwm_values[16:] *= 4095
-            # These two lines scale the intensity from 0-255 to 0-4095 but
-            # are commented out for now because they cause rendering glitches
-            # on the mini cube:
-            # pwm_values[16:] = frame[layer].ravel()
-            # pwm_values[16:] *= 16  # 16 == 4096 / 256
-            tlcs.write_pwm(pwm_values)
+            pwm_buffers.update(frame)
+        for pwm_buffer in pwm_buffers.buffers:
+            tlcs.write_pwm_packed(pwm_buffer)
 
     click.echo("Tesseract spidev LED driver exited.")
