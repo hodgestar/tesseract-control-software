@@ -27,15 +27,25 @@ and was written entirely in C with an abandoned implementation in Python.
 Todo
 ----
 
-* Initial effectbox implementation.
-* Simple effect for testing.
-* Initial simulator.
+* Uninvert layers.
+* Fix missing corner in cube sprite.
+* Add f(xy, t) -> z sprite.
+* Add a few animations using f(xy, t) -> t.
+* Add rain animation.
+* Shuffling blocks animation.
+* Slow down all / some animations.
+* Never repeat the same animation straight after itself.
 
 
 Implemented ideas
 -----------------
 
-* Nothing yet.
+* Initial effectbox implementation.
+* Simple effect for testing.
+* Initial simulator.
+* Cube sprite.
+* Sphere sprite.
+* Text animation.
 
 
 Discarded ideas
