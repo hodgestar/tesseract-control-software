@@ -38,5 +38,5 @@ class FrameConstants(object):
 
     def virtual_to_physical(self, virt_frame):
         """ Transform a virtual frame into a phyiscal one. """
-        # this is the identity operation for now -- it may change later
-        return virt_frame
+        # invert frame
+        return virt_frame[::-1, :, :]
