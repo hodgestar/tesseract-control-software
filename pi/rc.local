@@ -1,0 +1,3 @@
+# Earthstar
+/home/pi/tesseract-control-software/pi/effectbox.sh &
+/home/pi/tesseract-control-software/pi/spidev-driver.sh &
