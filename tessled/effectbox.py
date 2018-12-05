@@ -42,7 +42,7 @@ from .frame_utils import FrameConstants
     help='Frames per second.')
 @click.option(
     '--ttype', default="tesseract",
-    type=click.Choice(["tesseract", "simulator"]))
+    type=click.Choice(FrameConstants.TESSERACT_TYPES.keys()))
 @click.option(
     '--transition', default=60,
     help='Time between animation transitions.')

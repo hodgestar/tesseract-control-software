@@ -27,7 +27,6 @@ and was written entirely in C with an abandoned implementation in Python.
 Todo
 ----
 
-* Uninvert layers.
 * Fix missing corner in cube sprite.
 * Add f(xy, t) -> z sprite.
 * Add a few animations using f(xy, t) -> t.
@@ -46,6 +45,7 @@ Implemented ideas
 * Cube sprite.
 * Sphere sprite.
 * Text animation.
+* Uninvert layers.
 
 
 Discarded ideas

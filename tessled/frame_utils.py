@@ -13,6 +13,21 @@ FRAME_SHAPE = (8, 8, 8)
 FRAME_DTYPE = np.uint8
 
 
+def simulator_virtual_to_physical(virt_frame):
+    """ Convert virtual frame to physical frame for the simulator. """
+    return virt_frame
+
+
+def tesseract_virtual_to_physical(virt_frame):
+    """ Convert virtual frame to physical frame for the simulator. """
+    return virt_frame
+
+
+def minicube_virtual_to_physical(virt_frame):
+    """ Convert virtual frame to physical frame for the simulator. """
+    return virt_frame[::-1, :, :]
+
+
 class FrameConstants(object):
     """ Holder for frame constants.
 
@@ -23,20 +38,22 @@ class FrameConstants(object):
             "tesseract" if drawing to the real tesseract.
     """
 
+    TESSERACT_TYPES = {
+        "simulator": simulator_virtual_to_physical,
+        "tesseract": tesseract_virtual_to_physical,
+        "minicube": minicube_virtual_to_physical,
+    }
+
     def __init__(self, fps=10, ttype="simulator"):
-        assert ttype in ("simulator", "tesseract"), (
-            "ttype must be one of 'simulator' or 'tesseract'")
+        assert ttype in self.TESSERACT_TYPES, (
+            "ttype must be one of: ".join(sorted(self.TESSERACT_TYPES.keys())))
         self.fps = fps
         self.ttype = ttype
         self.frame_shape = FRAME_SHAPE
         self.frame_dtype = FRAME_DTYPE
         self.layers = FRAME_SHAPE[0]
+        self.virtual_to_physical = self.TESSERACT_TYPES[ttype]
 
     def empty_frame(self):
         """ Return an numpy array for frame. """
         return np.zeros(self.frame_shape, dtype=self.frame_dtype)
-
-    def virtual_to_physical(self, virt_frame):
-        """ Transform a virtual frame into a phyiscal one. """
-        # invert frame
-        return virt_frame[::-1, :, :]
