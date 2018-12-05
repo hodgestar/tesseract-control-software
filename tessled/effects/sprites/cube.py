@@ -46,3 +46,5 @@ class Cube(Sprite):
         frame[sz:bz, sy, bx] = intensity
         frame[sz:bz, by, sx] = intensity
         frame[sz:bz, by, bx] = intensity
+
+        frame[bz, by, bx] = intensity
