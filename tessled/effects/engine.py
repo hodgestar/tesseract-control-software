@@ -47,12 +47,22 @@ class EffectEngine(object):
         animation = animation_cls(self._frame_constants, **kw)
         self._animations[layer].append(animation)
 
+    def _is_valid_new_animation(self, name, layer):
+        if len(self._animation_types) <= 1:
+            return True
+        if len(self._animations[layer]) != 1:
+            return True
+        return self._animations[layer][0].ANIMATION != name
+
     def set_random_animation(self, layer=None):
         if layer is None:
             layer = "default"
-        del self._animations[layer][:]
-        name = random.choice(self._animation_types.keys())
+        while True:
+            name = random.choice(self._animation_types.keys())
+            if self._is_valid_new_animation(name, layer):
+                break
         click.echo("New animation: {!r}".format(name))
+        del self._animations[layer][:]
         self.add_animation(name, layer=layer)
 
     def set_next_transition(self, seconds):

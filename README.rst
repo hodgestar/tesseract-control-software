@@ -32,7 +32,6 @@ Todo
 * Add rain animation.
 * Shuffling blocks animation.
 * Slow down all / some animations.
-* Never repeat the same animation straight after itself.
 
 
 Implemented ideas
@@ -46,6 +45,7 @@ Implemented ideas
 * Text animation.
 * Uninvert layers.
 * Fix missing corner in cube sprite.
+* Never repeat the same animation straight after itself.
 
 
 Discarded ideas
