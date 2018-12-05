@@ -87,6 +87,7 @@ class Animation(object):
 
     ANIMATION = "unknown"
     ARGS = {}
+    SKIP_GENERIC_TEST = False
 
     def __init__(self, frame_constants, **kw):
         self.fc = frame_constants
