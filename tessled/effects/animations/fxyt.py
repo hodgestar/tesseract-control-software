@@ -69,3 +69,12 @@ class FxytWaveY(FxytMexicanHat):
     @frange(x=(-np.pi, np.pi), y=(-np.pi, np.pi), z=(-1, 1))
     def f(self, x, y, t):
         return np.sin(y + 1.5 * t)
+
+
+class FxytWaveXY(FxytMexicanHat):
+
+    ANIMATION = __name__ + ".wavexy"
+
+    @frange(x=(-np.pi/2, np.pi/2), y=(-np.pi/2, np.pi/2), z=(-1, 1))
+    def f(self, x, y, t):
+        return np.sin(x + 1.5 * t) * np.cos(y + 1.5 * t)
