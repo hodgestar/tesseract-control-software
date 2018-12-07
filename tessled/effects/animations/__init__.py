@@ -7,7 +7,9 @@ from .expandingbox import ExpandingBox
 from .exploringbox import ExploringBox
 from .exploringsphere import ExploringSphere
 from .foltext import FolText
-from .fxyt import FxytWaveY, FxytWaveXY
+from .fxyt import (
+    FxytWaveY, FxytWaveXY,
+    FxytRotatingPlane, FxytRotatingParabaloid)
 from .poweron import PowerOn
 
 DEFAULT_ANIMATIONS = [
@@ -17,6 +19,8 @@ DEFAULT_ANIMATIONS = [
     FolText,
     FxytWaveXY,
     FxytWaveY,
+    FxytRotatingPlane,
+    FxytRotatingParabaloid,
     PowerOn,
 ]
 

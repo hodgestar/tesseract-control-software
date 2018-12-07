@@ -78,3 +78,21 @@ class FxytWaveXY(FxytMexicanHat):
     @frange(x=(-np.pi/2, np.pi/2), y=(-np.pi/2, np.pi/2), z=(-1, 1))
     def f(self, x, y, t):
         return np.sin(x + 1.5 * t) * np.cos(y + 1.5 * t)
+
+
+class FxytRotatingPlane(FxytMexicanHat):
+
+    ANIMATION = __name__ + ".rotplane"
+
+    @frange(x=(0, 1), y=(-1, 1), z=(-2, 2))
+    def f(self, x, y, t):
+        return y * np.sin(1.5 * t) + x * np.cos(1.5 * t)
+
+
+class FxytRotatingParabaloid(FxytMexicanHat):
+
+    ANIMATION = __name__ + ".rotparab"
+
+    @frange(x=(-1, 1), y=(-1, 1), z=(-1, 0))
+    def f(self, x, y, t, s=0.7):
+        return - (x * np.sin(s * t) + y * np.cos(s * t)) ** 2
