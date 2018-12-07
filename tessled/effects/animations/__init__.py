@@ -30,6 +30,9 @@ def import_animations(name):
     return objs
 
 
-def import_animation(name):
+def import_animation(name, subname=None):
     """ Import an animation class by module name. """
-    return import_animations(name)[0]
+    objs = import_animations(name)
+    if subname:
+        objs = [x for x in objs if x.ANIMATION.endswith('.' + subname)]
+    return objs[0]
