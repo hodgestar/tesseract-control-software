@@ -12,6 +12,7 @@ from .fxyt import (
     FxytRotatingPlane, FxytRotatingParabaloid,
     FxytBreather)
 from .poweron import PowerOn
+from .starfield import Starfield
 
 DEFAULT_ANIMATIONS = [
     ExpandingBoxFast,
@@ -25,6 +26,7 @@ DEFAULT_ANIMATIONS = [
     FxytRotatingParabaloid,
     FxytBreather,
     PowerOn,
+    Starfield,
 ]
 
 
