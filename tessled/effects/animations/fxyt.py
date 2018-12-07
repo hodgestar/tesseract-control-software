@@ -45,7 +45,7 @@ class Fxyt(Sprite):
 
 class FxytMexicanHat(Animation):
 
-    ANIMATION = __name__
+    ANIMATION = __name__ + ".mexican_hat"
     ARGS = {
     }
 
@@ -60,3 +60,12 @@ class FxytMexicanHat(Animation):
         R = np.sqrt(x**2 + y**2) + 0.01
         A = np.sin(t)**2 + 0.01
         return A * np.sin(R) / R
+
+
+class FxytWaveY(FxytMexicanHat):
+
+    ANIMATION = __name__ + ".wavey"
+
+    @frange(x=(-np.pi, np.pi), y=(-np.pi, np.pi), z=(-1, 1))
+    def f(self, x, y, t):
+        return np.sin(y + 1.5 * t)
