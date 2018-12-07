@@ -18,8 +18,8 @@ DEFAULT_ANIMATIONS = [
 ]
 
 
-def import_animation(name):
-    """ Import an animation class by module name. """
+def import_animations(name):
+    """ Import all animation classes from a named module. """
     fullname = "{}.{}".format(__name__, name)
     module = __import__(fullname)
     for part in fullname.split(".")[1:]:
@@ -27,4 +27,9 @@ def import_animation(name):
     objs = [getattr(module, x) for x in dir(module) if not x.startswith("_")]
     objs = [x for x in objs if type(x) == type and issubclass(x, Animation)]
     objs = [x for x in objs if x is not Animation]
-    return objs[0]
+    return objs
+
+
+def import_animation(name):
+    """ Import an animation class by module name. """
+    return import_animations(name)[0]

@@ -23,12 +23,11 @@ def find_animations():
         for x in glob.glob(pkg_folder + "/*.py")
         if not x.endswith('/__init__.py')
     ]
-    clses = [
-        animations.import_animation(x) for x in pkg_modules
-    ]
-    clses = [
-        a for a in clses if not a.SKIP_GENERIC_TEST
-    ]
+    clses = []
+    for x in pkg_modules:
+        clses.extend(
+            a for a in animations.import_animations(x)
+            if not a.SKIP_GENERIC_TEST)
     return clses
 
 
