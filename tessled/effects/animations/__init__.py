@@ -9,7 +9,8 @@ from .exploringsphere import ExploringSphere
 from .foltext import FolText
 from .fxyt import (
     FxytWaveY, FxytWaveXY,
-    FxytRotatingPlane, FxytRotatingParabaloid)
+    FxytRotatingPlane, FxytRotatingParabaloid,
+    FxytBreather)
 from .poweron import PowerOn
 
 DEFAULT_ANIMATIONS = [
@@ -21,6 +22,7 @@ DEFAULT_ANIMATIONS = [
     FxytWaveY,
     FxytRotatingPlane,
     FxytRotatingParabaloid,
+    FxytBreather,
     PowerOn,
 ]
 

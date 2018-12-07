@@ -96,3 +96,26 @@ class FxytRotatingParabaloid(FxytMexicanHat):
     @frange(x=(-1, 1), y=(-1, 1), z=(-1, 0))
     def f(self, x, y, t, s=0.7):
         return - (x * np.sin(s * t) + y * np.cos(s * t)) ** 2
+
+
+class FxytBreather(Animation):
+
+    ANIMATION = __name__ + ".breather"
+    ARGS = {
+    }
+
+    def post_init(self):
+        self.fxyt_1 = Fxyt(self.f_1)
+        self.fxyt_2 = Fxyt(self.f_2)
+
+    def render(self, frame):
+        self.fxyt_1.render(frame)
+        self.fxyt_2.render(frame)
+
+    @frange(x=(-1, 1), y=(-1, 1), z=(-1.24, 1.6))
+    def f_1(self, x, y, t):
+        return np.sqrt(x**2 + y**2) * np.sin(0.5 * t)
+
+    @frange(x=(-1, 1), y=(-1, 1), z=(-np.sqrt(2), np.sqrt(2)))
+    def f_2(self, x, y, t):
+        return - np.sqrt(x**2 + y**2) * np.sin(0.5 * t)
