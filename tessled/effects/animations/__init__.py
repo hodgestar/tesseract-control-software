@@ -3,7 +3,7 @@
 """ Animations package. """
 
 from ..engine import Animation
-from .expandingbox import ExpandingBox
+from .expandingbox import ExpandingBoxFast, ExpandingBoxSlow
 from .exploringbox import ExploringBox
 from .exploringsphere import ExploringSphere
 from .foltext import FolText
@@ -14,7 +14,8 @@ from .fxyt import (
 from .poweron import PowerOn
 
 DEFAULT_ANIMATIONS = [
-    ExpandingBox,
+    ExpandingBoxFast,
+    ExpandingBoxSlow,
     ExploringBox,
     ExploringSphere,
     FolText,
