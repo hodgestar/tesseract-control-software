@@ -20,7 +20,7 @@ def simulator_virtual_to_physical(virt_frame):
 
 def tesseract_virtual_to_physical(virt_frame):
     """ Convert virtual frame to physical frame for the simulator. """
-    return virt_frame
+    return virt_frame[::-1, :, :]
 
 
 def minicube_virtual_to_physical(virt_frame):
