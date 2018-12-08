@@ -6,13 +6,15 @@ from ..engine import Animation
 from .expandingbox import ExpandingBoxFast, ExpandingBoxSlow
 from .exploringbox import ExploringBox
 from .exploringsphere import ExploringSphere
-from .foltext import FolText
+from .foltext import (FolText, LoremIpsumFieldText)
 from .fxyt import (
     FxytWaveY, FxytWaveXY,
     FxytRotatingPlane, FxytRotatingParabaloid,
     FxytBreather)
 from .poweron import PowerOn
 from .starfield import Starfield
+from .edges import SolidEdge
+from .phases import Phases
 
 DEFAULT_ANIMATIONS = [
     ExpandingBoxFast,
@@ -20,6 +22,7 @@ DEFAULT_ANIMATIONS = [
     ExploringBox,
     ExploringSphere,
     FolText,
+    LoremIpsumFieldText,
     FxytWaveXY,
     FxytWaveY,
     FxytRotatingPlane,
@@ -27,6 +30,8 @@ DEFAULT_ANIMATIONS = [
     FxytBreather,
     PowerOn,
     Starfield,
+    SolidEdge,
+    Phases,
 ]
 
 
