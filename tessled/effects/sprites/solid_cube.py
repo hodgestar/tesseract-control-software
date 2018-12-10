@@ -27,6 +27,8 @@ class SolidCube(Sprite):
         pass
 
     def render(self, frame):
-        frame[max(0, self.pos[0]):min(self.pos[0] + self.dims[0], 8),
+        frame[
+            max(0, self.pos[0]):min(self.pos[0] + self.dims[0], 8),
             max(0, self.pos[1]):min(self.pos[1] + self.dims[1], 8),
-            max(0, self.pos[2]):min(self.pos[2] + self.dims[2], 8)] = self.intensity
+            max(0, self.pos[2]):min(self.pos[2] + self.dims[2], 8)
+        ] = self.intensity
