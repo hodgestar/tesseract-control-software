@@ -6,7 +6,6 @@ from ..engine import Animation
 from .expandingbox import ExpandingBoxFast, ExpandingBoxSlow
 from .exploringbox import ExploringBox
 from .exploringsphere import ExploringSphere
-from .foltext import (FolText, LoremIpsumFieldText)
 from .fxyt import (
     FxytWaveY, FxytWaveXY,
     FxytRotatingPlane, FxytRotatingParabaloid,
@@ -21,8 +20,6 @@ DEFAULT_ANIMATIONS = [
     ExpandingBoxSlow,
     ExploringBox,
     ExploringSphere,
-    FolText,
-    LoremIpsumFieldText,
     FxytWaveXY,
     FxytWaveY,
     FxytRotatingPlane,
