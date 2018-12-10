@@ -5,12 +5,6 @@
     Lines moving in and out of phase.
 """
 
-# -*- coding: utf-8 -*-
-
-""" Large simple animations
-"""
-
-import random
 from ..engine import Animation
 from ..sprites import SolidCube
 
@@ -65,19 +59,25 @@ class Phases(Animation):
     }
 
     def post_init(self):
-        self._lines = [SolidCube(dims=(8, 1, 2)), SolidCube(dims=(8, 1, 2)),
-                       SolidCube(dims=(8, 1, 2)), SolidCube(dims=(8, 1, 2)),
-                       SolidCube(dims=(8, 1, 2)), SolidCube(dims=(8, 1, 2)),
-                       SolidCube(dims=(8, 1, 2)), SolidCube(dims=(8, 1, 2)),]
-        self._path = [Swipe(0, 4), Swipe(1, 3), Swipe(2, 2),
-                      Swipe(3, 1), Swipe(4, 1), Swipe(5, 2),
-                      Swipe(6, 3), Swipe(7, 4)]
+        self._lines = [
+            SolidCube(dims=(8, 1, 2)), SolidCube(dims=(8, 1, 2)),
+            SolidCube(dims=(8, 1, 2)), SolidCube(dims=(8, 1, 2)),
+            SolidCube(dims=(8, 1, 2)), SolidCube(dims=(8, 1, 2)),
+            SolidCube(dims=(8, 1, 2)), SolidCube(dims=(8, 1, 2)),
+        ]
+        self._path = [
+            Swipe(0, 4), Swipe(1, 3), Swipe(2, 2),
+            Swipe(3, 1), Swipe(4, 1), Swipe(5, 2),
+            Swipe(6, 3), Swipe(7, 4),
+        ]
 
     def render(self, frame):
-        frames = [self.fc.empty_frame(), self.fc.empty_frame(),
-                  self.fc.empty_frame(), self.fc.empty_frame(),
-                  self.fc.empty_frame(), self.fc.empty_frame(),
-                  self.fc.empty_frame(), self.fc.empty_frame(),]
+        frames = [
+            self.fc.empty_frame(), self.fc.empty_frame(),
+            self.fc.empty_frame(), self.fc.empty_frame(),
+            self.fc.empty_frame(), self.fc.empty_frame(),
+            self.fc.empty_frame(), self.fc.empty_frame(),
+        ]
         for i in range(8):
             self._lines[i].pos = self._path[i].next()
             self._lines[i].render(frames[i])
